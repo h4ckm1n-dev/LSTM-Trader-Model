@@ -10,6 +10,7 @@ from tensorflow.keras.callbacks import EarlyStopping
 import keras_tuner as kt
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import KFold
 import joblib  
 
 # Load preprocessed and sequenced data from HDF5
@@ -96,75 +97,87 @@ def main():
     # Save the scaler using joblib
     joblib.dump(scaler, './scaler.pkl')
     
-    hypermodel = LSTMHyperModel(input_shape=(X_train.shape[1], X_train.shape[2]))
+    kf = KFold(n_splits=5, shuffle=True)
     
-    early_stopping = EarlyStopping(
-        monitor='val_accuracy',  
-        patience=10,
-        restore_best_weights=True
-    )
+    for train_index, val_index in kf.split(X_train):
+        X_train_fold, X_val_fold = X_train[train_index], X_train[val_index]
+        y_train_fold, y_val_fold = y_train_encoded[train_index], y_train_encoded[val_index]
+        
+        hypermodel = LSTMHyperModel(input_shape=(X_train_fold.shape[1], X_train_fold.shape[2]))
     
-    tuner = kt.RandomSearch(
-        hypermodel,
-        objective='val_accuracy',  
-        max_trials=10,
-        executions_per_trial=2,
-        directory='keras_tuner_dir',
-        project_name='lstm_hyper_tuning'
-    )
-    
-    tuner.search(X_train, y_train_encoded, epochs=50, validation_split=0.1, callbacks=[early_stopping], verbose=1)
-    
-    best_model = tuner.get_best_models(num_models=1)[0]
-    best_hyperparameters = tuner.get_best_hyperparameters()[0]
-    
-    print(f"Best hyperparameters: {best_hyperparameters.values}")
-    
-    history = best_model.fit(
-        X_train, y_train_encoded,
-        epochs=100,
-        batch_size=32,
-        validation_split=0.1,
-        callbacks=[early_stopping],
-        verbose=1
-    )
-    
-    test_loss, test_accuracy = best_model.evaluate(X_test, y_test_encoded, verbose=1)
-    print(f"Test Loss: {test_loss}, Test Accuracy: {test_accuracy}")
+        early_stopping = EarlyStopping(
+            monitor='val_accuracy',  
+            patience=10,
+            restore_best_weights=True
+        )
+        
+        tuner = kt.RandomSearch(
+            hypermodel,
+            objective='val_accuracy',  
+            max_trials=10,
+            executions_per_trial=2,
+            directory='keras_tuner_dir',
+            project_name='lstm_hyper_tuning'
+        )
+        
+        tuner.search(X_train_fold, y_train_fold, epochs=50, validation_data=(X_val_fold, y_val_fold), callbacks=[early_stopping], verbose=1)
+        
+        best_model = tuner.get_best_models(num_models=1)[0]
+        best_hyperparameters = tuner.get_best_hyperparameters()[0]
+        
+        print(f"Best hyperparameters: {best_hyperparameters.values}")
+        
+        history = best_model.fit(
+            X_train_fold, y_train_fold,
+            epochs=100,
+            batch_size=32,
+            validation_data=(X_val_fold, y_val_fold),
+            callbacks=[early_stopping],
+            verbose=1
+        )
+        
+        test_loss, test_accuracy = best_model.evaluate(X_test, y_test_encoded, verbose=1)
+        print(f"Test Loss: {test_loss}, Test Accuracy: {test_accuracy}")
 
-    # Plotting comparison of actual and predicted future prices
-    y_pred_probs = best_model.predict(X_test)
-    y_pred_classes = np.argmax(y_pred_probs, axis=1)  
+        # Plotting comparison of actual and predicted future prices
+        y_pred_probs = best_model.predict(X_test)
+        y_pred_classes = np.argmax(y_pred_probs, axis=1)  
 
-    # Convert continuous values to discrete classes
-    y_test_classes_discrete = np.where(y_test_classes > 0, 1, 0)
-    y_pred_classes_discrete = (y_pred_probs[:, 1] > 0.5).astype(int)
+        # Convert continuous values to discrete classes
+        y_test_classes_discrete = np.where(y_test_classes > 0, 1, 0)
+        y_pred_classes_discrete = (y_pred_probs[:, 1] > 0.5).astype(int)
 
-    # Plot actual future prices
-    plt.figure(figsize=(10, 6))
-    plt.plot(range(len(future_prices_test)), future_prices_test, label='Actual Future Prices', color='blue')
+        # Plotting comparison of actual and predicted future prices along with buy/sell signals
+        plt.figure(figsize=(10, 6))
+        plt.plot(range(len(future_prices_test)), future_prices_test, label='Actual Future Prices', color='blue')        
 
-    # Plot predicted signals
-    for i in range(len(future_prices_test)):
-        if y_pred_classes_discrete[i] == y_test_classes_discrete[i]:
-            color = 'green'  # Correct prediction
-        else:
-            color = 'red'  # Incorrect prediction
-        plt.scatter(i, future_prices_test[i], color=color)
+        # Plot predicted signals
+        for i in range(len(future_prices_test)):
+            if y_pred_classes_discrete[i] == y_test_classes_discrete[i]:
+                color = 'green'  # Correct prediction
+            else:
+                color = 'red'  # Incorrect prediction
+            if y_pred_classes_discrete[i] == 1:  # Buy signal
+                plt.scatter(i, future_prices_test[i], color='green', marker='^', label='Buy Signal', zorder=5)
+            else:  # Sell signal
+                plt.scatter(i, future_prices_test[i], color='red', marker='v', label='Sell Signal', zorder=5)       
 
-    plt.title('Actual Future Prices with Predicted Buy/Sell Signals')
-    plt.xlabel('Time')
-    plt.ylabel('Price')
-    plt.legend()
-    plt.savefig('actual_vs_predicted_prices_with_signals.png', dpi=300)
+        plt.title('Actual Future Prices with Predicted Buy/Sell Signals')
+        plt.xlabel('Time')
+        plt.ylabel('Price')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig('actual_vs_predicted.png', dpi=300)
+        plt.show()      
 
-    history_df = pd.DataFrame(history.history)
-    history_df.to_csv('./model_training_history.csv', index=False)
-    
-    test_results_df = pd.DataFrame({'Test Loss': [test_loss], 'Test Accuracy': [test_accuracy]})
-    test_results_df.to_csv('./model_test_evaluation.csv', index=False)
 
-    best_model.save('./trained_model.keras')
+        history_df = pd.DataFrame(history.history)
+        history_df.to_csv('./model_training_history.csv', index=False)
+        
+        test_results_df = pd.DataFrame({'Test Loss': [test_loss], 'Test Accuracy': [test_accuracy]})
+        test_results_df.to_csv('./model_test_evaluation.csv', index=False)
+
+        best_model.save('./trained_model.keras')
 
 if __name__ == "__main__":
     main()
