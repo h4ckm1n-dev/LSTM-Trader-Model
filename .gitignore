@@ -1,0 +1,13 @@
+/OpenInterpreter
+/__pycache__
+/actual_vs_predicted_prices_with_signals.png
+/bitcoin_price_data_extended.csv
+/bitcoin_unseen_data_with_prices.csv
+/data.h5
+/distribution_of_close_prices.png
+/eth_price_data_extended.csv
+/keras_tuner_dir
+/model_test_evaluation.csv
+/model_training_history.csv
+/scaler.pkl
+/trained_model.keras
