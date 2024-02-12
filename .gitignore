@@ -11,3 +11,4 @@
 /model_training_history.csv
 /scaler.pkl
 /trained_model.keras
+result.png
