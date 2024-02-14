@@ -1,83 +1,59 @@
 import backtrader as bt
 import numpy as np
-import h5py
+from joblib import load
 import tensorflow as tf
-from sklearn.preprocessing import MinMaxScaler
-import joblib
+import pandas as pd
 
-# Assuming the model and scaler are trained with the specifics you provided
-model_file = './trained_model.keras'
-scaler_file = './scaler.pkl'
 
-# Load the trained LSTM model
-model = tf.keras.models.load_model(model_file)
-
-# Load the scaler used during preprocessing
-scaler = joblib.load(scaler_file)
-
-class MyStrategy(bt.Strategy):
-    params = (
-        ('model', model),
-        ('scaler', scaler),
-        ('sequence_length', 60),  # Match this with your training setup
-        ('predict_ahead', 1),     # Match this with your training setup
-        ('features', ['feature1', 'feature2', 'featureN']),  # Specify the exact features used
-    )
-
-    def log(self, txt, dt=None):
-        ''' Logging function for this strategy'''
-        dt = dt or self.datas[0].datetime.date(0)
-        print(f'{dt.isoformat()}, {txt}')
+# Custom Indicator that uses the saved model and scaler
+class PredictiveIndicator(bt.Indicator):
+    lines = ('signal',)
+    params = (('period', 60), ('scaler', None), ('model', None))
 
     def __init__(self):
-        self.dataclose = self.datas[0].close    # Keep a reference to the "close" line in the data[0] dataseries
-        self.order = None                       # To keep track of pending orders
+        self.addminperiod(self.params.period)
+        # Scaler and model are set via params
 
     def next(self):
-        # Skip the loop if an order is pending
-        if self.order:
-            return
+        size = self.params.period
+        values = np.array([self.data.close[-i] for i in range(size, 0, -1)])
+        values = values.reshape(-1, 1)  # Reshape for the scaler
 
-        # Prepare the data array for prediction
-        if len(self.data) >= self.params.sequence_length + self.params.predict_ahead:
-            data_window = np.array([[
-                self.datas[0].close.get(size=self.params.sequence_length),
-                # Add other feature lines as needed, matching the training feature set
-            ]])
-            data_window = data_window.reshape(self.params.sequence_length, len(self.params.features))
-            scaled_data = self.params.scaler.transform(data_window)
-            scaled_data = scaled_data.reshape(1, self.params.sequence_length, len(self.params.features))  # Reshape for the LSTM
+        scaled_values = self.params.scaler.transform(values)
+        scaled_values = scaled_values.reshape(1, size, 1)  # Reshape for the model
+        
+        prediction = self.params.model.predict(scaled_values)
+        self.lines.signal[0] = (prediction > 0.5) - (prediction <= 0.5)
 
-            # Predict the signal: buy (1), sell (0)
-            predicted_signal = np.argmax(self.params.model.predict(scaled_data), axis=-1)
+# Custom Strategy that uses the PredictiveIndicator
+class LSTMStrategy(bt.Strategy):
+    def __init__(self):
+        self.predictive_signal = PredictiveIndicator(period=60, 
+                                                      scaler=load('robust_scaler.joblib'), 
+                                                      model=tf.keras.models.load_model('best_lstm_model'))
 
-            # Execute orders
-            if predicted_signal == 1 and not self.position:  # Buy signal and we don't hold a position
-                self.order = self.buy()
-                self.log('BUY CREATE, %.2f' % self.dataclose[0])
-            elif predicted_signal == 0 and self.position:    # Sell signal and we hold a position
-                self.order = self.sell()
-                self.log('SELL CREATE, %.2f' % self.dataclose[0])
+    def next(self):
+        if self.predictive_signal[0] == 1:
+            self.buy(size=1)
+        elif self.predictive_signal[0] == -1:
+            self.sell(size=1)
 
-    def notify_order(self, order):
-        if order.status in [order.Submitted, order.Accepted]:
-            # Order has been submitted/accepted - no further action required
-            return
+# Load your data
+# Note: Adjust this part to load your specific data
+dataframe = pd.read_csv('./bitcoin_price_data_extended.csv', parse_dates=['Timestamp'])
+dataframe.set_index('Timestamp', inplace=True)
 
-        # Check if an order has been completed
-        # Attention: broker could reject order if not enough cash
-        if order.status in [order.Completed]:
-            if order.isbuy():
-                self.log(f'BUY EXECUTED, Price: {order.executed.price}, Cost: {order.executed.value}, Comm: {order.executed.comm}')
-            elif order.issell():
-                self.log(f'SELL EXECUTED, Price: {order.executed.price}, Cost: {order.executed.value}, Comm: {order.executed.comm}')
-            self.bar_executed = len(self)
+# Convert the Pandas dataframe to a Backtrader data feed
+data = bt.feeds.PandasData(dataname=dataframe)
 
-        elif order.status in [order.Canceled, order.Margin, order.Rejected]:
-            self.log('Order Canceled/Margin/Rejected')
+# Set up Backtrader cerebro
+cerebro = bt.Cerebro()
+cerebro.addstrategy(LSTMStrategy)
+cerebro.adddata(data)
+cerebro.broker.setcash(100000.0)  # Initial cash
+cerebro.addsizer(bt.sizers.FixedSize, stake=10)  # Stake size
 
-        # Reset orders
-        self.order = None
-
-    def stop(self):
-        self.log(f'Ending Value: {self.broker.getvalue()}, Cash: {self.broker.getcash()}')
+# Run the backtest
+print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
+cerebro.run()
+print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())

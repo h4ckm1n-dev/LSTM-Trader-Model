@@ -12,3 +12,12 @@
 /scaler.pkl
 /trained_model.keras
 result.png
+training_1/checkpoint
+training_1/cp.ckpt.data-00000-of-00001
+training_1/cp.ckpt.index
+robust_scaler.joblib
+best_lstm_model/fingerprint.pb
+best_lstm_model/keras_metadata.pb
+best_lstm_model/saved_model.pb
+best_lstm_model/variables/variables.data-00000-of-00001
+best_lstm_model/variables/variables.index
