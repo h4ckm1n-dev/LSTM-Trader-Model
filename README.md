@@ -26,11 +26,10 @@ git clone https://github.com/yourusername/LSTM-Trader-Model.git
 Generate sequences with dynamic thresholding to create signals for model training.
 
 ### Model Training
-Model Definition: Create an LSTM model with dynamically tuned hyperparameters.
-Hyperparameter Tuning: Use keras-tuner to find the optimal model configuration.
-Training Process: Employ callbacks like EarlyStopping and ModelCheckpoint for efficient training.
-Evaluation: Assess model performance with metrics such as accuracy, confusion matrix, and ROC-AUC score.
-Model Saving: Save the trained model for future inference.
+1. `load_sequenced_data_from_h5`: Retrieves pre-processed training and testing datasets, including features, labels, and future prices, from an HDF5 file.
+2. `LSTMHyperModel`: A class to define and build the LSTM model architecture, allowing customization of hyperparameters for tuning purposes.
+3. `main`: Manages the training process, including hyperparameter tuning with keras-tuner, implementing callbacks for training optimization, training with the best hyperparameters, evaluating model performance, and saving the trained model.
+
 ## Usage
 - Run the preprocessing script to prepare your data.
 - Use the model training script to train your LSTM model.
