@@ -21,3 +21,4 @@ best_lstm_model/keras_metadata.pb
 best_lstm_model/saved_model.pb
 best_lstm_model/variables/variables.data-00000-of-00001
 best_lstm_model/variables/variables.index
+/LSTM-Trader/*
