@@ -36,7 +36,7 @@ Generate sequences with dynamic thresholding to create signals for model trainin
 - Evaluate the model's performance with the provided testing data.
 
 ## Contributing
-Contributions are welcome!
+Contributions are welcome as for now the model performance are poor
 
 ## License
 Distributed under the MIT License. See `LICENSE` for more information.
