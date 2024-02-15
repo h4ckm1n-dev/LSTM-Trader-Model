@@ -26,8 +26,11 @@ git clone https://github.com/yourusername/LSTM-Trader-Model.git
 Generate sequences with dynamic thresholding to create signals for model training.
 
 ### Model Training
-Refer to the LSTM model training script for details on training the predictive model.
-
+Model Definition: Create an LSTM model with dynamically tuned hyperparameters.
+Hyperparameter Tuning: Use keras-tuner to find the optimal model configuration.
+Training Process: Employ callbacks like EarlyStopping and ModelCheckpoint for efficient training.
+Evaluation: Assess model performance with metrics such as accuracy, confusion matrix, and ROC-AUC score.
+Model Saving: Save the trained model for future inference.
 ## Usage
 - Run the preprocessing script to prepare your data.
 - Use the model training script to train your LSTM model.
