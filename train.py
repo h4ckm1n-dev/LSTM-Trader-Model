@@ -22,8 +22,9 @@ def load_sequenced_data_from_h5(filepath):
     return X_train, X_test, y_train, y_test, future_prices_test
 
 class LSTMHyperModel(kt.HyperModel):
-    def __init__(self, input_shape):
+    def __init__(self, input_shape, num_classes):
         self.input_shape = input_shape
+        self.num_classes = num_classes
 
     def build(self, hp):
         model = Sequential([
@@ -51,6 +52,9 @@ class LSTMHyperModel(kt.HyperModel):
             Dense(1, activation='sigmoid')
         ])
 
+        # Add epochs as a hyperparameter
+        epochs = hp.Int('epochs', min_value=50, max_value=200, step=10)
+
         model.compile(optimizer=Adam(hp.Float('learning_rate', min_value=1e-5, max_value=1e-2, sampling='LOG')),
                       loss='binary_crossentropy',
                       metrics=['accuracy'])
@@ -62,7 +66,8 @@ def main():
     X_train, X_test, y_train, y_test, future_prices_test = load_sequenced_data_from_h5(filepath)
 
     input_shape = (X_train.shape[1], X_train.shape[2])
-    hypermodel = LSTMHyperModel(input_shape=input_shape)
+    num_classes = 1  # Binary classification
+    hypermodel = LSTMHyperModel(input_shape=input_shape, num_classes=num_classes)
 
     tuner = kt.RandomSearch(
         hypermodel,
@@ -73,8 +78,8 @@ def main():
         project_name='lstm_hyper_tuning'
     )
 
-    early_stopping = EarlyStopping(monitor='val_accuracy', patience=10, restore_best_weights=True)
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=1e-6, verbose=1)
+    # Learning rate scheduler options
+    lr_scheduler = tf.keras.callbacks.LearningRateScheduler(lambda epoch: 1e-8 * 10**(epoch / 20))  # Example of a cyclic LR scheduler
 
     kf = KFold(n_splits=5, shuffle=True)
 
@@ -82,7 +87,8 @@ def main():
         X_train_fold, X_val_fold = X_train[train_index], X_train[val_index]
         y_train_fold, y_val_fold = y_train[train_index], y_train[val_index]
 
-        tuner.search(X_train_fold, y_train_fold, epochs=50, validation_data=(X_val_fold, y_val_fold), callbacks=[early_stopping, reduce_lr], verbose=1)
+        # Pass validation data to tuner.search
+        tuner.search(X_train_fold, y_train_fold, epochs=50, validation_data=(X_val_fold, y_val_fold), callbacks=[lr_scheduler], verbose=1)
 
     best_hyperparameters = tuner.get_best_hyperparameters()[0]
     best_model = tuner.hypermodel.build(best_hyperparameters)
@@ -97,7 +103,8 @@ def main():
                                   verbose=1)
 
     # Final training with the best hyperparameters
-    history = best_model.fit(X_train, y_train, epochs=100, validation_split=0.2, callbacks=[cp_callback, early_stopping, reduce_lr], verbose=1)
+    epochs = best_hyperparameters.get('epochs')  # Get the value of the 'epochs' hyperparameter
+    history = best_model.fit(X_train, y_train, epochs=epochs, validation_split=0.2, callbacks=[cp_callback], verbose=1)
 
     # Evaluate the best model
     test_loss, test_accuracy = best_model.evaluate(X_test, y_test, verbose=1)
@@ -111,7 +118,6 @@ def main():
     print("Classification Report:\n", classification_report(y_test, y_pred_classes))
     print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred_classes))
     print("ROC-AUC Score:", roc_auc_score(y_test, y_pred))
-
 
     # Save the fully trained model for later use or inference
     best_model.save('best_lstm_model')
