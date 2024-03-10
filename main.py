@@ -5,7 +5,7 @@ import os
 current_directory = os.path.dirname(os.path.realpath(__file__))
 
 # List of scripts to run
-scripts_to_run = ["get_data.py", "preprocess.py", "train.py"]
+scripts_to_run = ["preprocess.py", "train.py"]
 
 # Run each script
 for script in scripts_to_run:

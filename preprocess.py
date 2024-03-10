@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import glob  # For loading all CSV files in a directory
 from sklearn.preprocessing import RobustScaler
 from ta import add_all_ta_features
 import h5py
@@ -11,15 +12,22 @@ warnings.filterwarnings("ignore", message="invalid value encountered in scalar d
 # Suppress the specific FutureWarning related to the 'ta' library
 warnings.filterwarnings("ignore", category=FutureWarning, message="Series.__setitem__ treating keys as positions is deprecated.*")
 
-def dynamic_threshold(prices, window=30, multiplier=1.5):
-    """Calculate a dynamic threshold based on recent volatility."""
-    daily_returns = np.diff(prices) / prices[:-1]  # Calculate daily returns
-    rolling_std = pd.Series(daily_returns).rolling(window=window).std().to_numpy()  # Calculate rolling std
-    return rolling_std * multiplier
+def dynamic_threshold(prices, vix_values, window=30, base_multiplier=1.5):
+    """
+    Calculate a dynamic threshold based on recent volatility and market conditions.
+    Adjusts the threshold multiplier based on VIX levels.
+    """
+    daily_returns = np.diff(prices) / prices[:-1]
+    rolling_std = pd.Series(daily_returns).rolling(window=window).std().to_numpy()
+    
+    # Adjust multiplier based on VIX levels (this can be tuned to your preference)
+    adjusted_multiplier = base_multiplier * (1 + (vix_values - vix_values.mean()) / vix_values.std())
+    
+    return rolling_std * adjusted_multiplier
 
-def create_sequences_with_signals(data, prices, seq_length, predict_ahead=1, dynamic_thresh=False):
+def create_sequences_with_signals(data, prices, vix_values, seq_length, predict_ahead=1, dynamic_thresh=False):
     xs, ys, future_prices = [], [], []
-    dynamic_thresh_values = dynamic_threshold(prices) if dynamic_thresh else None
+    dynamic_thresh_values = dynamic_threshold(prices, vix_values) if dynamic_thresh else None
 
     for i in range(len(data) - seq_length - predict_ahead):
         x = data[i:(i + seq_length)]
@@ -33,7 +41,7 @@ def create_sequences_with_signals(data, prices, seq_length, predict_ahead=1, dyn
         elif price_change < -threshold:
             y = 0  # Short signal
         else:
-            continue  # Skip if within threshold
+            y = 2  # Hold signal
 
         xs.append(x)
         ys.append(y)
@@ -42,9 +50,20 @@ def create_sequences_with_signals(data, prices, seq_length, predict_ahead=1, dyn
     print(f"Generated {len(xs)} sequences with signals.")
     return np.array(xs), np.array(ys), np.array(future_prices)
 
-# Load and preprocess data
-df = pd.read_csv('./bitcoin_price_data_extended.csv', parse_dates=['Timestamp'], index_col='Timestamp')
-print("Data loaded successfully.\n", df.head())
+# Adjust this path to where your CSV files are stored
+path_to_csv_files = './market-data/*.csv'  # Example: './data/*.csv'
+
+# Use glob to list all CSV files in the directory
+csv_files = glob.glob(path_to_csv_files)
+
+# Load and concatenate all CSV files into a single DataFrame
+df_list = []
+for file in csv_files:
+    df_temp = pd.read_csv(file, parse_dates=['Timestamp'], index_col='Timestamp')
+    df_list.append(df_temp)
+
+df = pd.concat(df_list)
+print("Data from all CSV files loaded and concatenated successfully.\n", df.head())
 
 df['Daily_Returns'] = df['Close'].pct_change()
 df.ffill(inplace=True)  # Forward fill to handle initial missing values

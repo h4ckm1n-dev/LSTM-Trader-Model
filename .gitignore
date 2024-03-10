@@ -5,3 +5,4 @@ data.h5
 training_1/checkpoint
 training_1/cp.ckpt.data-00000-of-00001
 training_1/cp.ckpt.index
+market-data/*

@@ -29,7 +29,7 @@ def download_crypto_data(symbols, start_date, end_date, timeframe):
         console.print(f"OHLCV data for {symbol} fetched successfully.", style="bold green")
 
         # Specify your CSV file path dynamically
-        csv_file_path = f'./{symbol.replace("/", "_")}_price_data.csv'
+        csv_file_path = f'./market-data/{symbol.replace("/", "_")}_price_data.csv'
 
         # Writing to CSV
         with open(csv_file_path, 'w', newline='') as file:
@@ -43,9 +43,60 @@ def download_crypto_data(symbols, start_date, end_date, timeframe):
         console.print(f"Data for {symbol} successfully saved to {csv_file_path}", style="bold green")
 
 # Your desired date range and other parameters
-start_date = datetime(2021, 1, 1)  # Example: starting from January 1, 2021
+start_date = datetime(2018, 1, 1)  # Example: starting from January 1, 2021
 end_date = datetime.now()  # Up to the current date
-symbols = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'MATIC/USDT']  # List of symbols to download
+symbols = [
+    'BTC/USDT',   # Bitcoin
+    'ETH/USDT',   # Ethereum
+    'BNB/USDT',   # Binance Coin
+    'ADA/USDT',   # Cardano
+    'SOL/USDT',   # Solana
+    'XRP/USDT',   # Ripple
+    'DOT/USDT',   # Polkadot
+    'LUNA/USDT',  # Terra (consider recent events for Terra)
+    'DOGE/USDT',  # Dogecoin
+    'AVAX/USDT',  # Avalanche
+    'SHIB/USDT',  # Shiba Inu
+    'MATIC/USDT', # Polygon
+    'LTC/USDT',   # Litecoin
+    'UNI/USDT',   # Uniswap
+    'LINK/USDT',  # Chainlink
+    'ALGO/USDT',  # Algorand
+    'XLM/USDT',   # Stellar
+    'VET/USDT',   # VeChain
+    'AXS/USDT',   # Axie Infinity
+    'ATOM/USDT',   # Cosmos
+    'FTT/USDT',    # FTX Token
+    'TRX/USDT',    # TRON
+    'ETC/USDT',    # Ethereum Classic
+    'FIL/USDT',    # Filecoin
+    'THETA/USDT',  # Theta Network
+    'XTZ/USDT',    # Tezos
+    'EOS/USDT',    # EOS
+    'AAVE/USDT',   # Aave
+    'KSM/USDT',    # Kusama
+    'NEO/USDT',    # NEO
+    'MKR/USDT',    # Maker
+    'COMP/USDT',   # Compound
+    'ZEC/USDT',    # Zcash
+    'WAVES/USDT',  # Waves
+    'DASH/USDT',   # Dash
+    'SNX/USDT',    # Synthetix
+    'DCR/USDT',    # Decred
+    'XEM/USDT',    # NEM
+    'QTUM/USDT',   # Qtum
+    'ZIL/USDT',    # Zilliqa
+    'BAT/USDT',    # Basic Attention Token
+    'ENJ/USDT',    # Enjin Coin
+    'MANA/USDT',   # Decentraland
+    'SUSHI/USDT',  # SushiSwap
+    'YFI/USDT',    # Yearn.finance
+    'UMA/USDT',    # UMA
+    'ICX/USDT',    # ICON
+    'ONT/USDT',    # Ontology
+    'ZRX/USDT'     # 0x
+]
+
 timeframe = '1d'
 
 # Download the data
