@@ -2,7 +2,7 @@ import numpy as np
 import h5py
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Layer, LSTM, Dense, Dropout, Bidirectional, BatchNormalization
+from tensorflow.keras.layers import Layer, LSTM, Dense, Dropout, Bidirectional, BatchNormalization, Input
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.optimizers import Adam, RMSprop, Nadam
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
@@ -10,6 +10,15 @@ import tensorflow.keras.backend as K
 import keras_tuner as kt
 from sklearn.metrics import classification_report, confusion_matrix
 
+# Check if GPU is available
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    print("CUDA is enabled. GPU device(s) found:")
+    for gpu in gpus:
+        print(gpu)
+else:
+    print("CUDA is not enabled. Using CPU for computation.")
+    
 # Custom Attention Layer
 class Attention(Layer):
     def __init__(self, **kwargs):
@@ -60,9 +69,9 @@ class LSTMHyperModel(kt.HyperModel):
 
     def build(self, hp):
         model = Sequential([
+            Input(shape=self.input_shape),  # Explicitly define input shape
             Bidirectional(LSTM(units=hp.Int('units', min_value=32, max_value=512, step=32),
                                activation='tanh',
-                               input_shape=self.input_shape,
                                return_sequences=True)),
             BatchNormalization(),
             Dropout(rate=hp.Float('dropout_1', min_value=0.2, max_value=0.5, step=0.05)),
