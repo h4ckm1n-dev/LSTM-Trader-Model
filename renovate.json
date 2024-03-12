@@ -1,11 +1,11 @@
 {
-    "extends": ["config:base"],
-    "packageRules": [
-      {
-        "matchManagers": ["pip_requirements"],
-        "matchPackagePatterns": ["*"],
-        "dependencyDashboard": true
-      }
-    ]
-  }
-  
+  "extends": ["config:base"],
+  "packageRules": [
+    {
+      "matchManagers": ["pip_requirements"],
+      "matchPackagePatterns": ["*"],
+      "groupName": "All Python dependencies",
+      "groupSlug": "python-updates"
+    }
+  ]
+}
