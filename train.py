@@ -115,7 +115,7 @@ def main():
     best_hyperparameters = tuner.get_best_hyperparameters(num_trials=1)[0]
     best_model = tuner.hypermodel.build(best_hyperparameters)
 
-    checkpoint_path = "best_model_cp.ckpt"
+    checkpoint_path = "best_model_cp.weights.h5"
     cp_callback = ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True, verbose=1)
 
     best_model.fit(X_train, y_train_categorical, epochs=200, batch_size=64, validation_split=0.2, callbacks=[cp_callback, early_stopping, reduce_lr], verbose=1)

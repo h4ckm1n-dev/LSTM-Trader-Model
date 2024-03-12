@@ -10,3 +10,4 @@ best_lstm_model.h5
 best_model_cp.ckpt.data-00000-of-00001
 best_model_cp.ckpt.index
 checkpoint
+best_model_cp.weights.h5
