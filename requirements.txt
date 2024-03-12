@@ -1,0 +1,10 @@
+numpy==1.26.4
+pandas==2.2.0
+h5py==3.10.0
+tensorflow==2.15.0.post1
+keras-tuner==1.4.6
+scikit-learn==1.4.1.post1
+ta==0.11.0
+ccxt==4.2.46
+rich==13.7.0
+backtrader==1.9.78.123

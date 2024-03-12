@@ -6,3 +6,7 @@ training_1/checkpoint
 training_1/cp.ckpt.data-00000-of-00001
 training_1/cp.ckpt.index
 market-data/*
+best_lstm_model.h5
+best_model_cp.ckpt.data-00000-of-00001
+best_model_cp.ckpt.index
+checkpoint

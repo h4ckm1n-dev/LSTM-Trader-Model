@@ -1,0 +1,11 @@
+{
+    "extends": ["config:base"],
+    "packageRules": [
+      {
+        "matchManagers": ["pip_requirements"],
+        "matchPackagePatterns": ["*"],
+        "dependencyDashboard": true
+      }
+    ]
+  }
+  
